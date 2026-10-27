@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat-for-YJ Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Emoji Picker Element -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        /* Glassmorphism Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .dark .glass {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.7);
+        }
+        emoji-picker {
+            width: 100%;
+            height: 320px;
+            --num-columns: 8;
+            --category-emoji-size: 1.125rem;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300 flex items-center justify-center p-0 sm:p-3 md:p-6 select-none overflow-hidden">
+
+    <!-- 메인 앱 컨테이너 -->
+    <div class="w-full max-w-5xl h-full sm:h-[92vh] glass rounded-none sm:rounded-3xl shadow-2xl flex border border-slate-200/50 dark:border-slate-800/50 overflow-hidden relative">
+        
+        <!-- 메인 채팅 영역 -->
+        <div class="flex-1 flex flex-col h-full min-w-0 bg-slate-50/50 dark:bg-slate-900/50 relative">
+            
+            <!-- 상단 헤더 -->
+            <header class="px-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-20 gap-2">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="relative">
+                        <div id="header-avatar" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-indigo-500/20">
+                            YJ
+                        </div>
+                        <span id="connection-status-dot" class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="온라인"></span>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-bold text-base sm:text-lg truncate">Chat-for-YJ</h1>
+                            <span id="connection-text" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 hidden sm:inline-block">연결됨</span>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 truncate">Firebase Realtime DB Sync (/Chat)</p>
+                    </div>
+                </div>
+
+                <!-- 검색 & 툴바 버튼들 -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <!-- 검색 필터 버튼 -->
+                    <button id="toggle-search-btn" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-sm" title="메시지 검색">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+
+                    <!-- 사운드 토글 -->
+                    <button id="toggle-sound-btn" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-sm" title="알림음 토글">
+                        <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                    </button>
+
+                    <!-- 테마 전환 (다크/라이트) -->
+                    <button id="toggle-theme-btn" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-sm" title="테마 변경">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+
+                    <!-- 닉네임 설정 -->
+                    <button id="open-profile-btn" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-sm flex items-center gap-1.5" title="프로필 설정">
+                        <i class="fa-solid fa-user-gear"></i>
+                        <span id="my-name-display" class="text-xs font-semibold max-w-[80px] truncate hidden md:inline-block">익명</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 메시지 검색 바 (가려짐/펼쳐짐) -->
+            <div id="search-bar-container" class="hidden px-4 py-2 bg-indigo-50/80 dark:bg-slate-800/80 border-b border-indigo-100 dark:border-slate-700 backdrop-blur-sm transition-all duration-300">
+                <div class="relative flex items-center">
+                    <i class="fa-solid fa-search absolute left-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="search-input" placeholder="대화 내용 검색..." class="w-full pl-8 pr-8 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button id="close-search-btn" class="absolute right-2 text-slate-400 hover:text-slate-600 text-xs p-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 메시지 스크롤 구역 -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 relative scroll-smooth">
+                
+                <!-- 로딩 인디케이터 -->
+                <div id="loading-spinner" class="absolute inset-0 flex flex-col items-center justify-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm z-10 transition-opacity duration-300">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-600 mb-2"></i>
+                    <p class="text-xs text-slate-500 font-medium">실시간 대화 데이터를 가져오는 중...</p>
+                </div>
+
+                <!-- 메시지 없음 안내 -->
+                <div id="empty-state" class="hidden h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600">
+                    <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                        <i class="fa-regular fa-comments text-2xl text-slate-300 dark:text-slate-500"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-600 dark:text-slate-400">채팅방에 메시지가 없습니다</p>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">파일이나 첫 메시지를 공유해 보세요!</p>
+                </div>
+
+                <!-- 메시지 아이템들이 동적으로 여기에 생성됩니다 -->
+            </div>
+
+            <!-- 하단 스크롤 버튼 -->
+            <button id="scroll-bottom-btn" class="hidden absolute right-6 bottom-24 z-10 w-10 h-10 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-all transform hover:scale-105 active:scale-95">
+                <i class="fa-solid fa-arrow-down text-sm"></i>
+            </button>
+
+            <!-- 이모지 피커 팝업 -->
+            <div id="emoji-picker-container" class="hidden absolute bottom-20 left-4 z-30 w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <emoji-picker class="light"></emoji-picker>
+            </div>
+
+            <!-- 파일 선택 미리보기 패널 (업로드 전) -->
+            <div id="file-preview-bar" class="hidden px-4 py-2.5 bg-indigo-50/90 dark:bg-slate-800/90 border-t border-indigo-100 dark:border-slate-700 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div id="preview-icon-box" class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-slate-700 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0 overflow-hidden">
+                        <i class="fa-solid fa-file"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p id="preview-filename" class="text-xs font-semibold truncate text-slate-800 dark:text-slate-100">filename.pdf</p>
+                        <p id="preview-filesize" class="text-[10px] text-slate-500">0 MB / 50 MB</p>
+                    </div>
+                </div>
+                <button id="cancel-file-btn" class="text-slate-400 hover:text-red-500 p-1.5 text-sm transition-colors">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </button>
+            </div>
+
+            <!-- 입력 툴바 & 메세지 작성 바 -->
+            <footer class="p-3 bg-white/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 backdrop-blur-md relative z-10">
+                <form id="chat-form" class="flex items-center gap-2">
+                    
+                    <!-- 파일 첨부 버튼 (숨겨진 file input 연동) -->
+                    <input type="file" id="file-input" class="hidden" accept="*">
+                    <button type="button" id="attach-btn" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 text-slate-500 hover:text-indigo-600 dark:text-slate-400 transition-all flex items-center justify-center shrink-0" title="파일/이미지 첨부 (최대 50MB)">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </button>
+
+                    <!-- 이모지 버튼 -->
+                    <button type="button" id="emoji-btn" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-slate-700 text-slate-500 hover:text-amber-500 dark:text-slate-400 transition-all flex items-center justify-center shrink-0" title="이모티콘">
+                        <i class="fa-regular fa-face-smile text-lg"></i>
+                    </button>
+
+                    <!-- 텍스트 입력창 -->
+                    <div class="flex-1 relative">
+                        <textarea 
+                            id="message-input" 
+                            rows="1" 
+                            placeholder="메시지 또는 50MB 이하 파일 전송..." 
+                            class="w-full bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-100 placeholder-slate-400 border border-transparent focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none max-h-24 leading-normal"
+                        ></textarea>
+                    </div>
+
+                    <!-- 전송 버튼 -->
+                    <button 
+                        type="submit" 
+                        id="send-btn" 
+                        class="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold transition-all flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/30"
+                        title="전송"
+                    >
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </form>
+            </footer>
+
+        </div>
+    </div>
+
+    <!-- 프로필 설정 모달 -->
+    <div id="profile-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden transition-all">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-800">
+            <div class="text-center mb-5">
+                <div id="modal-avatar-preview" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl mx-auto mb-3 shadow-lg shadow-indigo-500/20">
+                    YJ
+                </div>
+                <h2 class="text-lg font-bold">프로필 설정</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">대화방에서 사용될 닉네임을 설정하세요.</p>
+            </div>
+            <form id="profile-form">
+                <input 
+                    type="text" 
+                    id="nickname-input" 
+                    placeholder="닉네임 입력 (최대 12자)" 
+                    maxlength="12"
+                    class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                />
+                <div class="flex gap-2">
+                    <button type="button" id="close-profile-btn" class="w-1/2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium transition-all">
+                        취소
+                    </button>
+                    <button type="submit" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-2.5 text-sm font-semibold transition-all shadow-md shadow-indigo-600/20">
+                        저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 이미지 확대 미리보기 모달 -->
+    <div id="image-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden transition-all cursor-pointer">
+        <img id="modal-image" src="" alt="확대 이미지" class="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain">
+        <button class="absolute top-6 right-6 text-white text-2xl p-2 hover:opacity-75">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- 토스트 메시지 시스템 -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Firebase SDK (Modular JS v10) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, query, limitToLast, remove, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Firebase 설정 (주어진 Realtime Database URL)
+        const firebaseConfig = {
+            databaseURL: "https://chat-for-yj-default-rtdb.firebaseio.com/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const chatRef = ref(db, 'Chat');
+
+        // 상태 변수
+        let currentUser = localStorage.getItem('chat_yj_username') || '';
+        let userColor = localStorage.getItem('chat_yj_color') || getRandomColor();
+        let soundEnabled = localStorage.getItem('chat_yj_sound') !== 'false';
+        let isDarkMode = localStorage.getItem('chat_yj_theme') === 'dark' || window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        let pendingFile = null; // 선택된 파일 저장
+        let allMessagesData = {}; // 검색 및 렌더링용 메시지 캐시
+        let lastMessageKeys = [];
+
+        // DOM 요소
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const fileInput = document.getElementById('file-input');
+        const attachBtn = document.getElementById('attach-btn');
+        const filePreviewBar = document.getElementById('file-preview-bar');
+        const previewFilename = document.getElementById('preview-filename');
+        const previewFilesize = document.getElementById('preview-filesize');
+        const previewIconBox = document.getElementById('preview-icon-box');
+        const cancelFileBtn = document.getElementById('cancel-file-btn');
+        const emojiBtn = document.getElementById('emoji-btn');
+        const emojiPickerContainer = document.getElementById('emoji-picker-container');
+        const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const emptyState = document.getElementById('empty-state');
+        const myNameDisplay = document.getElementById('my-name-display');
+        const headerAvatar = document.getElementById('header-avatar');
+        const profileModal = document.getElementById('profile-modal');
+        const profileForm = document.getElementById('profile-form');
+        const nicknameInput = document.getElementById('nickname-input');
+        const modalAvatarPreview = document.getElementById('modal-avatar-preview');
+        const toggleSearchBtn = document.getElementById('toggle-search-btn');
+        const searchBarContainer = document.getElementById('search-bar-container');
+        const searchInput = document.getElementById('search-input');
+        const closeSearchBtn = document.getElementById('close-search-btn');
+        const toggleThemeBtn = document.getElementById('toggle-theme-btn');
+        const themeIcon = document.getElementById('theme-icon');
+        const toggleSoundBtn = document.getElementById('toggle-sound-btn');
+        const soundIcon = document.getElementById('sound-icon');
+        const imageModal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+
+        // 초깃값 세팅
+        function initApp() {
+            if (!currentUser) {
+                currentUser = '사용자_' + Math.floor(1000 + Math.random() * 9000);
+                localStorage.setItem('chat_yj_username', currentUser);
+            }
+            if (!localStorage.getItem('chat_yj_color')) {
+                localStorage.setItem('chat_yj_color', userColor);
+            }
+
+            // 테마 적용
+            applyTheme(isDarkMode);
+
+            // 사운드 아이콘 업데이트
+            updateSoundIcon();
+
+            // 유저 프로필 UI 업데이트
+            updateProfileUI();
+
+            // Firebase 수신 리스너 등록
+            listenToMessages();
+
+            // 네트워크 상태 확인
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus();
+        }
+
+        // 테마 변경 처리
+        function applyTheme(dark) {
+            isDarkMode = dark;
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                themeIcon.className = 'fa-solid fa-sun text-amber-400';
+                localStorage.setItem('chat_yj_theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeIcon.className = 'fa-solid fa-moon text-slate-500';
+                localStorage.setItem('chat_yj_theme', 'light');
+            }
+        }
+
+        toggleThemeBtn.addEventListener('click', () => applyTheme(!isDarkMode));
+
+        // 사운드 토글
+        toggleSoundBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('chat_yj_sound', soundEnabled);
+            updateSoundIcon();
+            showToast(soundEnabled ? '알림음이 켜졌습니다.' : '알림음이 꺼졌습니다.', 'info');
+        });
+
+        function updateSoundIcon() {
+            soundIcon.className = soundEnabled ? 'fa-solid fa-volume-high text-indigo-600 dark:text-indigo-400' : 'fa-solid fa-volume-xmark text-slate-400';
+        }
+
+        // 색상 유틸리티
+        function getRandomColor() {
+            const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#06b6d4', '#3b82f6'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function getInitials(name) {
+            return (name || '익명').substring(0, 2).toUpperCase();
+        }
+
+        function updateProfileUI() {
+            myNameDisplay.textContent = currentUser;
+            headerAvatar.textContent = getInitials(currentUser);
+            headerAvatar.style.backgroundColor = userColor;
+            modalAvatarPreview.textContent = getInitials(currentUser);
+            modalAvatarPreview.style.backgroundColor = userColor;
+        }
+
+        // 프로필 설정 모달 관리
+        document.getElementById('open-profile-btn').addEventListener('click', () => {
+            nicknameInput.value = currentUser;
+            profileModal.classList.remove('hidden');
+        });
+
+        document.getElementById('close-profile-btn').addEventListener('click', () => {
+            profileModal.classList.add('hidden');
+        });
+
+        profileForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = nicknameInput.value.trim();
+            if (val) {
+                currentUser = val;
+                localStorage.setItem('chat_yj_username', currentUser);
+                updateProfileUI();
+                profileModal.classList.add('hidden');
+                renderMessages(); // 내 이름 변경 시 UI 갱신
+                showToast('프로필이 변경되었습니다.', 'success');
+            }
+        });
+
+        // 파일 선택 처리 (최대 50MB)
+        attachBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // 50MB 용량 제한
+            const maxMB = 50;
+            if (file.size > maxMB * 1024 * 1024) {
+                showToast(`파일 크기는 최대 ${maxMB}MB 이하만 첨부할 수 있습니다.`, 'error');
+                fileInput.value = '';
+                return;
+            }
+
+            pendingFile = file;
+            previewFilename.textContent = file.name;
+            previewFilesize.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+            // 아이콘 처리
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewIconBox.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                let iconClass = 'fa-file';
+                if (file.type.includes('pdf')) iconClass = 'fa-file-pdf text-red-500';
+                else if (file.type.includes('zip') || file.type.includes('rar')) iconClass = 'fa-file-zipper text-amber-500';
+                else if (file.type.includes('word') || file.type.includes('text')) iconClass = 'fa-file-lines text-blue-500';
+
+                previewIconBox.innerHTML = `<i class="fa-solid ${iconClass} text-lg"></i>`;
+            }
+
+            filePreviewBar.classList.remove('hidden');
+        });
+
+        cancelFileBtn.addEventListener('click', clearPendingFile);
+
+        function clearPendingFile() {
+            pendingFile = null;
+            fileInput.value = '';
+            filePreviewBar.classList.add('hidden');
+            previewIconBox.innerHTML = `<i class="fa-solid fa-file"></i>`;
+        }
+
+        // 이모지 피커 관리
+        emojiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            emojiPickerContainer.classList.toggle('hidden');
+        });
+
+        document.querySelector('emoji-picker').addEventListener('emoji-click', event => {
+            messageInput.value += event.detail.unicode;
+            emojiPickerContainer.classList.add('hidden');
+            messageInput.focus();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!emojiPickerContainer.contains(e.target) && !emojiBtn.contains(e.target)) {
+                emojiPickerContainer.classList.add('hidden');
+            }
+        });
+
+        // 검색 창 조작
+        toggleSearchBtn.addEventListener('click', () => {
+            searchBarContainer.classList.toggle('hidden');
+            if (!searchBarContainer.classList.contains('hidden')) {
+                searchInput.focus();
+            } else {
+                searchInput.value = '';
+                renderMessages();
+            }
+        });
+
+        closeSearchBtn.addEventListener('click', () => {
+            searchBarContainer.classList.add('hidden');
+            searchInput.value = '';
+            renderMessages();
+        });
+
+        searchInput.addEventListener('input', () => renderMessages());
+
+        // 웹 오디오 수신음 생성
+        function playNotificationSound() {
+            if (!soundEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {
+                console.log('Sound blocked by browser policy');
+            }
+        }
+
+        // 온라인 상태 표시
+        function updateOnlineStatus() {
+            const dot = document.getElementById('connection-status-dot');
+            const text = document.getElementById('connection-text');
+            if (navigator.onLine) {
+                dot.className = "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full";
+                text.textContent = "연결됨";
+                text.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 hidden sm:inline-block";
+            } else {
+                dot.className = "absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-rose-500 border-2 border-white dark:border-slate-900 rounded-full";
+                text.textContent = "오프라인";
+                text.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 hidden sm:inline-block";
+            }
+        }
+
+        // Firebase 실시간 동기화
+        function listenToMessages() {
+            const recentQuery = query(chatRef, limitToLast(150));
+
+            onValue(recentQuery, (snapshot) => {
+                loadingSpinner.style.opacity = '0';
+                setTimeout(() => loadingSpinner.classList.add('hidden'), 300);
+
+                if (!snapshot.exists()) {
+                    allMessagesData = {};
+                    emptyState.classList.remove('hidden');
+                    chatMessages.innerHTML = '';
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                allMessagesData = snapshot.val();
+                
+                const keys = Object.keys(allMessagesData);
+                // 새로운 메시지가 추가된 경우 사운드
+                if (lastMessageKeys.length > 0 && keys.length > lastMessageKeys.length) {
+                    const latestKey = keys[keys.length - 1];
+                    if (allMessagesData[latestKey].sender !== currentUser) {
+                        playNotificationSound();
+                    }
+                }
+                lastMessageKeys = keys;
+
+                renderMessages();
+            }, (err) => {
+                console.error("Firebase error:", err);
+                loadingSpinner.innerHTML = `<p class="text-xs text-rose-500 p-4 text-center">Firebase 연결 오류가 발생했습니다.<br>Realtime Database 보안 규칙을 확인하세요.</p>`;
+            });
+        }
+
+        // 메시지 렌더링
+        function renderMessages() {
+            chatMessages.innerHTML = '';
+            const searchTerm = searchInput.value.toLowerCase().trim();
+
+            const keys = Object.keys(allMessagesData);
+            let matchCount = 0;
+
+            keys.forEach((key) => {
+                const msg = allMessagesData[key];
+                msg.id = key;
+
+                // 검색 필터 적용
+                if (searchTerm) {
+                    const textMatch = (msg.text || '').toLowerCase().includes(searchTerm);
+                    const senderMatch = (msg.sender || '').toLowerCase().includes(searchTerm);
+                    const fileMatch = (msg.fileName || '').toLowerCase().includes(searchTerm);
+                    if (!textMatch && !senderMatch && !fileMatch) return;
+                }
+
+                matchCount++;
+                appendMessageToDOM(msg);
+            });
+
+            if (matchCount === 0 && searchTerm) {
+                chatMessages.innerHTML = `<div class="text-center text-xs text-slate-400 py-8">"${escapeHtml(searchTerm)}" 검색 결과가 없습니다.</div>`;
+            } else {
+                scrollToBottom(false);
+            }
+        }
+
+        // DOM 메시지 엘리먼트 생성
+        function appendMessageToDOM(msg) {
+            const isMe = msg.sender === currentUser;
+            const container = document.createElement('div');
+            container.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} group relative mb-1`;
+
+            const initials = getInitials(msg.sender);
+            const userBg = msg.userColor || '#6366f1';
+            const formattedTime = formatTime(msg.timestamp);
+
+            let contentHTML = '';
+
+            // 1. 파일/이미지 콘텐츠 처리
+            if (msg.fileData) {
+                if (msg.fileType && msg.fileType.startsWith('image/')) {
+                    contentHTML += `
+                        <div class="mb-1.5 overflow-hidden rounded-2xl max-w-xs sm:max-w-sm border border-slate-200 dark:border-slate-700 bg-slate-900/5">
+                            <img src="${msg.fileData}" alt="${escapeHtml(msg.fileName || '이미지')}" class="w-full max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity img-preview-trigger" data-src="${msg.fileData}">
+                            <div class="p-2 text-[11px] flex justify-between items-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                                <span class="truncate font-medium">${escapeHtml(msg.fileName)}</span>
+                                <a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="text-indigo-600 dark:text-indigo-400 hover:underline ml-2 shrink-0"><i class="fa-solid fa-download"></i></a>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    contentHTML += `
+                        <div class="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl mb-1.5 shadow-sm max-w-xs sm:max-w-sm">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold shrink-0">
+                                <i class="fa-solid fa-file-arrow-down text-lg"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-semibold truncate text-slate-800 dark:text-slate-100">${escapeHtml(msg.fileName)}</p>
+                                <p class="text-[10px] text-slate-400">${msg.fileSize || ''}</p>
+                            </div>
+                            <a href="${msg.fileData}" download="${escapeHtml(msg.fileName)}" class="w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center text-xs transition-colors shrink-0">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                        </div>
+                    `;
+                }
+            }
+
+            // 2. 텍스트 메시지
+            if (msg.text) {
+                const safeText = escapeHtml(msg.text).replace(/\n/g, '<br>');
+                if (isMe) {
+                    contentHTML += `
+                        <div class="bg-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-sm shadow-sm break-words leading-relaxed max-w-xs sm:max-w-md">
+                            ${safeText}
+                        </div>
+                    `;
+                } else {
+                    contentHTML += `
+                        <div class="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl rounded-tl-none px-4 py-2.5 text-sm shadow-sm break-words leading-relaxed max-w-xs sm:max-w-md">
+                            ${safeText}
+                        </div>
+                    `;
+                }
+            }
+
+            // 3. 리액션 표시
+            let reactionsHTML = '';
+            if (msg.reactions) {
+                const reactionList = Object.entries(msg.reactions);
+                if (reactionList.length > 0) {
+                    reactionsHTML = `<div class="flex flex-wrap gap-1 mt-1">`;
+                    reactionList.forEach(([emoji, count]) => {
+                        reactionsHTML += `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700/70 text-[10px]">${emoji} ${count}</span>`;
+                    });
+                    reactionsHTML += `</div>`;
+                }
+            }
+
+            // 최종 레이아웃 조립
+            if (isMe) {
+                container.innerHTML = `
+                    <div class="flex items-end gap-1.5 max-w-full">
+                        <!-- 액션 툴바 -->
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-slate-400 text-xs pr-1">
+                            <button class="hover:text-indigo-600 p-1 copy-btn" title="복사"><i class="fa-regular fa-copy"></i></button>
+                            <button class="hover:text-rose-500 p-1 delete-btn" title="삭제"><i class="fa-regular fa-trash-can"></i></button>
+                        </div>
+                        <span class="text-[10px] text-slate-400 select-none pb-1">${formattedTime}</span>
+                        <div class="flex flex-col items-end">
+                            ${contentHTML}
+                            ${reactionsHTML}
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="flex items-start gap-2 max-w-full">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5 shadow-sm" style="background-color: ${userBg};">
+                            ${initials}
+                        </div>
+                        <div class="flex flex-col items-start min-w-0">
+                            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5 ml-1 select-none">${escapeHtml(msg.sender)}</span>
+                            <div class="flex items-end gap-1.5">
+                                <div class="flex flex-col items-start">
+                                    ${contentHTML}
+                                    ${reactionsHTML}
+                                </div>
+                                <span class="text-[10px] text-slate-400 select-none pb-1">${formattedTime}</span>
+                                <!-- 리액션 패널 -->
+                                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-slate-400 text-xs pl-1">
+                                    <button class="hover:text-amber-500 p-1 react-btn" data-emoji="👍"><i class="fa-regular fa-thumbs-up"></i></button>
+                                    <button class="hover:text-rose-500 p-1 react-btn" data-emoji="❤️"><i class="fa-regular fa-heart"></i></button>
+                                    <button class="hover:text-indigo-600 p-1 copy-btn" title="복사"><i class="fa-regular fa-copy"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 이벤트 바인딩
+            // 복사 버튼
+            const copyBtn = container.querySelector('.copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const textToCopy = msg.text || msg.fileName || '';
+                    navigator.clipboard.writeText(textToCopy).then(() => showToast('클립보드에 복사되었습니다.', 'info'));
+                });
+            }
+
+            // 삭제 버튼 (내가 보낸 메시지)
+            const deleteBtn = container.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm('이 메시지를 삭제하시겠습니까?')) {
+                        remove(ref(db, `Chat/${msg.id}`));
+                        showToast('메시지가 삭제되었습니다.', 'info');
+                    }
+                });
+            }
+
+            // 리액션 버튼
+            const reactBtns = container.querySelectorAll('.react-btn');
+            reactBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const emoji = btn.dataset.emoji;
+                    const currentReactions = msg.reactions || {};
+                    const newCount = (currentReactions[emoji] || 0) + 1;
+                    update(ref(db, `Chat/${msg.id}/reactions`), {
+                        [emoji]: newCount
+                    });
+                });
+            });
+
+            // 이미지 클릭 모달
+            const imgEl = container.querySelector('.img-preview-trigger');
+            if (imgEl) {
+                imgEl.addEventListener('click', () => {
+                    modalImage.src = imgEl.dataset.src;
+                    imageModal.classList.remove('hidden');
+                });
+            }
+
+            chatMessages.appendChild(container);
+        }
+
+        imageModal.addEventListener('click', () => imageModal.classList.add('hidden'));
+
+        // 스크롤 맨 아래로 이동
+        function scrollToBottom(smooth = true) {
+            if (smooth) {
+                chatMessages.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+            } else {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        // 스크롤 감지 (하단 이동 버튼 활성화)
+        chatMessages.addEventListener('scroll', () => {
+            const distanceBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight;
+            if (distanceBottom > 150) {
+                scrollBottomBtn.classList.remove('hidden');
+            } else {
+                scrollBottomBtn.classList.add('hidden');
+            }
+        });
+
+        scrollBottomBtn.addEventListener('click', () => scrollToBottom(true));
+
+        // 메시지 및 파일 전송
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const text = messageInput.value.trim();
+            if (!text && !pendingFile) return;
+
+            let fileData = null;
+            let fileName = null;
+            let fileSize = null;
+            let fileType = null;
+
+            if (pendingFile) {
+                fileName = pendingFile.name;
+                fileSize = (pendingFile.size / (1024 * 1024)).toFixed(2) + ' MB';
+                fileType = pendingFile.type;
+
+                // Base64 인코딩
+                fileData = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(pendingFile);
+                });
+            }
+
+            const payload = {
+                sender: currentUser,
+                userColor: userColor,
+                text: text,
+                fileName: fileName,
+                fileSize: fileSize,
+                fileType: fileType,
+                fileData: fileData,
+                timestamp: new Date().toISOString()
+            };
+
+            // Firebase에 Push
+            push(chatRef, payload)
+                .then(() => {
+                    messageInput.value = '';
+                    clearPendingFile();
+                    scrollToBottom(true);
+                })
+                .catch((err) => {
+                    console.error("전송 에러:", err);
+                    showToast('메시지 전송 실패. 네트워크 상태를 확인하세요.', 'error');
+                });
+        });
+
+        // 엔터키 키다운 수신
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        // 날짜/시간 포맷팅 유틸
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return isoString;
+
+            const now = new Date();
+            const isToday = d.toDateString() === now.toDateString();
+
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const timeStr = `${h}:${m}`;
+
+            if (isToday) {
+                return timeStr;
+            } else {
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${month}/${day} ${timeStr}`;
+            }
+        }
+
+        // HTML 문자열 이스케이프
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // 토스트 알림창
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-800 text-white';
+            if (type === 'error') bgClass = 'bg-rose-600 text-white';
+            if (type === 'success') bgClass = 'bg-emerald-600 text-white';
+
+            toast.className = `${bgClass} text-xs font-semibold px-4 py-3 rounded-xl shadow-xl transition-all transform translate-y-2 opacity-0 flex items-center gap-2 pointer-events-auto`;
+            toast.innerHTML = `<span>${msg}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 앱 구동 시작
+        initApp();
+    </script>
+</body>
+</html>
